@@ -11,7 +11,7 @@ Please note that I am not actively working on this but will gladly accept pull r
 </details>
 
 
-### Installation
+### Manual Installation
 - Install [BepInEx](https://github.com/decaprime/VRising-Modding/releases/tag/1.668.4)
 - Extract _PopupTotals.dll_ into _(VRising folder)/BepInEx/plugins_
 
@@ -22,6 +22,8 @@ Please note that I am not actively working on this but will gladly accept pull r
 Post an issue on the [github repo](https://github.com/matt-harp/PopupTotals) 
 
 ### Changelog
+
+`1.1.0` V Rising 1.0 Update
 
 `1.0.7` Gloomrot Update (kindly contributed by p1xel8ted)
 

@@ -2,6 +2,7 @@
 using HarmonyLib;
 using ProjectM;
 using ProjectM.UI;
+using Stunlock.Core;
 using Unity.Collections;
 using Unity.Entities;
 
@@ -13,7 +14,7 @@ public class ScrollingCombatTextParentMapperPatch
     private static Action<SCTText, ScrollingCombatTextParentMapper.EntryData> _handler;
 
     private static bool _hooked;
-    private static PrefabGUID? _sctTypeResourceGain;
+    private static PrefabGUID _sctTypeResourceGain = new(1876501183); // hardcoded for SCT_Type_ResouceGain
     private static World _world;
 
     [HarmonyPrefix]
@@ -21,20 +22,8 @@ public class ScrollingCombatTextParentMapperPatch
     private static void OnUpdate_Prefix(ref ScrollingCombatTextParentMapper __instance)
     {
         if (_hooked) return;
-        var pcs = __instance.World.GetExistingSystem<PrefabCollectionSystem>();
+        var pcs = __instance.World.GetExistingSystemManaged<PrefabCollectionSystem>();
         if (pcs == null || __instance._Elements == null)
-        {
-            _hooked = false;
-            return;
-        }
-
-        var gain = pcs.NameToPrefabGuidDictionary.TryGetValue("(SCTType) SCT_Type_ResouceGain", out var guid);
-        if (gain)
-        {
-            _sctTypeResourceGain = guid;
-        }
-
-        if (_sctTypeResourceGain == null)
         {
             _hooked = false;
             return;
@@ -45,17 +34,18 @@ public class ScrollingCombatTextParentMapperPatch
         __instance._Elements.OnEntryUpdate += _handler;
         _hooked = true;
     }
-
+    
     private static void OnEntryUpdate(SCTText text, ScrollingCombatTextParentMapper.EntryData entry)
     {
-        if (_sctTypeResourceGain != null && entry.Type.GuidHash != _sctTypeResourceGain.Value.GuidHash) return;
+        // require ResourceGain SCTs
+        if (entry.Type.GuidHash != _sctTypeResourceGain.GuidHash) return;
         var str = entry.SourceTypeText.ToString();
         if (str.Contains('(') && str.Contains(')')) return;
         var prefab = ItemUtils.GetOrRebuild(str);
-        ConsoleShared.TryGetLocalCharacter(out var character, _world);
+        if (!ConsoleShared.TryGetLocalCharacterInCurrentWorld(out var character, _world)) return;
         var total = InventoryUtilities.GetItemAmount(_world.EntityManager, character, prefab);
         var newStr = $"{str} ({total})";
-        entry.SourceTypeText = new FixedString128(newStr);
+        entry.SourceTypeText = new FixedString128Bytes(newStr);
         text.Text.m_text = text.Text.m_text.Replace(str, newStr);
     }
 

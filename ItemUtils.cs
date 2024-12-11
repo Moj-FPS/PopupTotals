@@ -4,6 +4,8 @@ using System.Linq;
 using HarmonyLib;
 using ProjectM;
 using Stunlock.Localization;
+using Stunlock.Core;
+using Unity.Entities;
 
 namespace PopupTotals
 {
@@ -11,19 +13,17 @@ namespace PopupTotals
     public class ItemUtils
     {
         private static readonly Dictionary<string, PrefabGUID> ItemNameToPrefabLookup = new();
-        private static GameDataSystem System { get; set; }
-        private static readonly HashSet<string> Errored = new();
+        private static GameDataSystem DataSystem { get; set; }
+        private static readonly HashSet<string> Errored = [];
 
-        private static readonly List<string> SubStringsToMatch = new()
-        {
-            "_Ingredient_", "Item_Consumable", "Item_Building_Plants"
-        };
+        private static readonly List<string> SubStringsToMatch =
+            ["_Ingredient_", "Item_Consumable", "Item_Building_Plants"];
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameDataSystem), nameof(GameDataSystem.RegisterItems))]
         private static void GameDataSystem_RegisterItems_Postfix(ref GameDataSystem __instance)
         {
-            System = __instance;
+            DataSystem = __instance;
             if (__instance.ItemHashLookupMap.Count() == 0) return;
             Plugin.Logger.LogInfo("Creating lookup tables...");
             RebuildLut();
@@ -33,19 +33,21 @@ namespace PopupTotals
         {
             ItemNameToPrefabLookup.Clear();
             Errored.Clear();
-            var managed = System.ManagedDataRegistry;
-            foreach (var kv in System.ItemHashLookupMap)
+            var managed = DataSystem.ManagedDataRegistry;
+            foreach (var kv in DataSystem.ItemHashLookupMap)
             {
                 try
                 {
                     var guid = kv.Key;
                     var managedData = managed.GetOrDefault<ManagedItemData>(guid);
                     if (managedData == null) continue;
-                    if (!SubStringsToMatch.Any(managedData.PrefabName.Contains)) continue;
-                    if (managedData.PrefabName is "Item_Ingredient_Kit_Base" or "Item_Ingredient_Gem_Base") continue;
+                    managed._PrefabLookupMap.TryGetFixedName(guid, out var fixedName);
+                    var prefabName = fixedName.ToString();
+                    if (!SubStringsToMatch.Any(prefabName.Contains)) continue;
+                    if (prefabName is "Item_Ingredient_Kit_Base" or "Item_Ingredient_Gem_Base") continue;
                     var itemName = Localization.Get(managedData.Name, false);
-                    Plugin.Logger.LogDebug($"Item: {itemName}, PrefabName: {managedData.PrefabName}, PrefabGUID: {guid.ToString()}");
-
+                    Plugin.Logger.LogDebug($"Item: {itemName}, PrefabName: {prefabName}, PrefabGUID: {guid.ToString()}");
+                    
                     ItemNameToPrefabLookup.TryAdd(itemName, guid);
                 }
                 catch (Exception e)

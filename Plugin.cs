@@ -1,23 +1,29 @@
-﻿using System.Reflection;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 
-namespace PopupTotals
-{
-    [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-    public class Plugin : BasePlugin
-    {
-        internal static ManualLogSource Logger { get; private set; }
-        private Harmony _harmony;
+namespace PopupTotals;
 
-        public override void Load()
-        {
-            Logger = Log;
-            _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
-            _harmony.PatchAll(Assembly.GetExecutingAssembly());
-            Log.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
-        }
+[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+public class Plugin : BasePlugin
+{
+    Harmony _harmony;
+    internal static ManualLogSource Logger { get; private set; }
+
+    public override void Load()
+    {
+        Logger = Log;
+        Log.LogInfo($"Plugin {MyPluginInfo.PLUGIN_GUID} version {MyPluginInfo.PLUGIN_VERSION} is loaded!");
+
+        _harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
+        _harmony.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
     }
+
+    public override bool Unload()
+    {
+        _harmony?.UnpatchSelf();
+        return true;
+    }
+
 }
